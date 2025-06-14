@@ -18,9 +18,9 @@ pub const Glyph = struct {
 
     /// https://cairographics.org/manual/cairo-text.html#cairo-glyph-allocate
     pub fn allocate(num_glyphs: usize) !Self {
-        var c_ptr = c.cairo_glyph_allocate(@intCast(c_int, num_glyphs));
+        const c_ptr = c.cairo_glyph_allocate(@intCast(num_glyphs));
         if (c_ptr == null) return Error.NoMemory;
-        var ptr = @ptrCast(*GlyphT, c_ptr);
+        const ptr: *GlyphT = @ptrCast(c_ptr);
         return Self{ .ptr = ptr };
     }
 };

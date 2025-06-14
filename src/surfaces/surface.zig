@@ -41,7 +41,7 @@ pub const Surface = struct {
 
     /// https://www.cairographics.org/manual/cairo-PNG-Support.html#cairo-image-surface-create-from-png
     pub fn createFromPng(filename: []const u8) !Surface {
-        var c_ptr = try png_surface.createFromPng(filename);
+        const c_ptr = try png_surface.createFromPng(filename);
         try Self.status(c_ptr);
         return Self{ .c_ptr = c_ptr };
     }
@@ -51,7 +51,7 @@ pub const Surface = struct {
     /// it when he no longer needs it.
     /// https://www.cairographics.org/manual/cairo-cairo-surface-t.html#cairo-surface-create-similar
     pub fn createSimilar(other: *Self, content: Content, width: u16, height: u16) !Self {
-        var c_ptr = c.cairo_surface_create_similar(other.c_ptr, content.toCairoEnum(), @intCast(c_int, width), @intCast(c_int, height));
+        const c_ptr = c.cairo_surface_create_similar(other.c_ptr, content.toCairoEnum(), @intCast(width), @intCast(height));
         // cairo_surface_create_similar always return a valid pointer, but it
         // can return a pointer to a "nil" surface if the `other` surface is
         // already in an error state, or if any other error occurs.
@@ -61,7 +61,7 @@ pub const Surface = struct {
 
     /// https://www.cairographics.org/manual/cairo-cairo-surface-t.html#cairo-surface-create-similar-image
     pub fn createSimilarImage(other: *Self, format: Format, width: u16, height: u16) !Self {
-        var c_ptr = c.cairo_surface_create_similar_image(other.c_ptr, format.toCairoEnum(), @intCast(c_int, width), @intCast(c_int, height));
+        const c_ptr = c.cairo_surface_create_similar_image(other.c_ptr, format.toCairoEnum(), @intCast(width), @intCast(height));
         // cairo_surface_create_similar_image always return a valid pointer, but
         // it can return a pointer to a "nil" surface if the `other` surface is
         // already in an error state, or if any other error occurs.
@@ -142,7 +142,27 @@ pub const Surface = struct {
             std.log.warn("`getHeight` not implemented for {}", .{st});
             return Error.SurfaceTypeMismatch;
         } else {
-            return @intCast(u16, c.cairo_image_surface_get_height(self.c_ptr));
+            return @intCast(c.cairo_image_surface_get_height(self.c_ptr));
+        }
+    }
+
+    pub fn getData(self: *Self) !?*anyopaque {
+        const st = self.getType();
+        if (st != SurfaceType.image) {
+            std.log.warn("`getHeight` not implemented for {}", .{st});
+            return Error.SurfaceTypeMismatch;
+        } else {
+            return c.cairo_image_surface_get_data(self.c_ptr);
+        }
+    }
+
+    pub fn getStride(self: *Self) !u16 {
+        const st = self.getType();
+        if (st != SurfaceType.image) {
+            std.log.warn("`getStride` not implemented for {}", .{st});
+            return Error.SurfaceTypeMismatch;
+        } else {
+            return @intCast(c.cairo_image_surface_get_stride(self.c_ptr));
         }
     }
 
@@ -173,7 +193,7 @@ pub const Surface = struct {
             std.log.warn("`getWidth` not implemented for {}", .{st});
             return Error.SurfaceTypeMismatch;
         } else {
-            return @intCast(u16, c.cairo_image_surface_get_width(self.c_ptr));
+            return @intCast(c.cairo_image_surface_get_width(self.c_ptr));
         }
     }
 
@@ -185,7 +205,7 @@ pub const Surface = struct {
     /// Create an image surface of the specified format and dimensions.
     /// https://cairographics.org/manual/cairo-Image-Surfaces.html#cairo-image-surface-create
     pub fn image(width: u16, height: u16) !Self {
-        var c_ptr = try image_surface.create(Format.argb32, width, height);
+        const c_ptr = try image_surface.create(Format.argb32, width, height);
         try Self.status(c_ptr);
         return Self{ .c_ptr = c_ptr };
     }
@@ -208,7 +228,7 @@ pub const Surface = struct {
     /// Create a PDF surface of the specified size in points to be written to filename.
     /// https://www.cairographics.org/manual/cairo-PDF-Surfaces.html#cairo-pdf-surface-create
     pub fn pdf(comptime filename: []const u8, width_pt: f64, height_pt: f64) !Self {
-        var c_ptr = try pdf_surface.create(filename, width_pt, height_pt);
+        const c_ptr = try pdf_surface.create(filename, width_pt, height_pt);
         try Self.status(c_ptr);
         return Self{ .c_ptr = c_ptr };
     }
@@ -221,7 +241,7 @@ pub const Surface = struct {
     /// Create a new surface that will emit its rendering through a cairoscript file.
     /// https://www.cairographics.org/manual/cairo-Script-Surfaces.html#cairo-script-surface-create
     pub fn script(filename: []const u8, content: Content, width: f64, height: f64) !Self {
-        var c_ptr = try script_surface.surfaceCreate(filename, content, width, height);
+        const c_ptr = try script_surface.surfaceCreate(filename, content, width, height);
         // Cairo guarantees that c_ptr is a valid pointer, but it could be a
         // pointer to a "nil" surface if an error such as out of memory occurs.
         // That's why we check the surface's status.
@@ -260,7 +280,7 @@ pub const Surface = struct {
     pub fn setSize(self: *Self, width: f64, height: f64) void {
         const st = self.getType();
         switch (st) {
-            SurfaceType.xcb => xcb_surface.setSize(self.c_ptr, @floatToInt(u16, width), @floatToInt(u16, height)),
+            SurfaceType.xcb => xcb_surface.setSize(self.c_ptr, @intFromFloat(width), @intFromFloat(height)),
             SurfaceType.pdf => pdf_surface.setSize(self.c_ptr, width, height),
             else => std.log.warn("`setSize` not implemented for {}", .{st}),
         }
@@ -288,7 +308,7 @@ pub const Surface = struct {
     }
 
     pub fn svg(comptime filename: []const u8, width_pt: f64, height_pt: f64) !Surface {
-        var c_ptr = try svg_surface.create(filename, width_pt, height_pt);
+        const c_ptr = try svg_surface.create(filename, width_pt, height_pt);
         try Self.status(c_ptr);
         return Self{ .c_ptr = c_ptr };
     }
@@ -299,7 +319,7 @@ pub const Surface = struct {
     }
 
     pub fn xcb(conn: ?*c.struct_xcb_connection_t, drawable: u32, visual: ?*c.struct_xcb_visualtype_t, width: u16, height: u16) !Surface {
-        var c_ptr = try xcb_surface.surfaceCreate(conn, drawable, visual, width, height);
+        const c_ptr = try xcb_surface.surfaceCreate(conn, drawable, visual, width, height);
         try Self.status(c_ptr);
         return Self{ .c_ptr = c_ptr };
     }

@@ -13,7 +13,7 @@ const statusToError = error_handling.statusToError;
 /// cairo_device_destroy() when done with it.
 /// https://www.cairographics.org/manual/cairo-Script-Surfaces.html#cairo-script-create
 pub fn create(filename: []const u8) !*c.struct__cairo_device {
-    var c_ptr = c.cairo_script_create(filename.ptr);
+    const c_ptr = c.cairo_script_create(filename.ptr);
     // cairo_script_create always returns a valid pointer, but it will return a
     // pointer to a "nil" device if an error such as out of memory occurs. That
     // is why we check that everything is ok with cairo_device_status.
@@ -54,7 +54,7 @@ pub fn setMode(script: *c.struct__cairo_device, mode: ScriptMode) void {
 /// Create a Script Surface
 /// https://www.cairographics.org/manual/cairo-Script-Surfaces.html#cairo-script-surface-create
 pub fn surfaceCreate(filename: []const u8, content: Content, width: f64, height: f64) !*c.struct__cairo_surface {
-    var script_c_ptr = try create(filename);
+    const script_c_ptr = try create(filename);
     // cairo_script_surface_create always returns a valid pointer, but it will
     // return a pointer to a "nil" surface if an error such as out of memory
     // occurs. You can use cairo_surface_status() to check for this.
@@ -63,5 +63,5 @@ pub fn surfaceCreate(filename: []const u8, content: Content, width: f64, height:
 
 /// https://www.cairographics.org/manual/cairo-Script-Surfaces.html#cairo-script-write-comment
 pub fn writeComment(script: *c.struct__cairo_device, comment: []const u8) void {
-    c.cairo_script_write_comment(script, comment.ptr, @intCast(c_int, comment.len));
+    c.cairo_script_write_comment(script, comment.ptr, @intCast(comment.len));
 }

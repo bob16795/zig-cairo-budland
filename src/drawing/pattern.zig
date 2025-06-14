@@ -41,7 +41,7 @@ pub const Pattern = struct {
     /// object and should call destroy() when finished with it.
     /// https://cairographics.org/manual/cairo-cairo-pattern-t.html#cairo-pattern-create-for-surface
     pub fn createForSurface(surface: *Surface) !Self {
-        var c_ptr = c.cairo_pattern_create_for_surface(surface.c_ptr);
+        const c_ptr = c.cairo_pattern_create_for_surface(surface.c_ptr);
         // cairo_pattern_create_for_surface always returns a valid pointer, but
         // if an error occurred the pattern status will be set to an error.
         _ = try Pattern.status(c_ptr);
@@ -53,7 +53,7 @@ pub const Pattern = struct {
     /// when finished with it.
     /// https://cairographics.org/manual/cairo-cairo-pattern-t.html#cairo-pattern-create-linear
     pub fn createLinear(x0: f64, y0: f64, x1: f64, y1: f64) !Self {
-        var c_ptr = c.cairo_pattern_create_linear(x0, y0, x1, y1);
+        const c_ptr = c.cairo_pattern_create_linear(x0, y0, x1, y1);
         // cairo_pattern_create_linear always returns a valid pointer, but if an
         // error occurred the pattern status will be set to an error.
         _ = try Pattern.status(c_ptr);
@@ -63,7 +63,7 @@ pub const Pattern = struct {
     // TODO: add documentation and more tests
     /// https://cairographics.org/manual/cairo-cairo-pattern-t.html#cairo-pattern-create-mesh
     pub fn createMesh() !Self {
-        var c_ptr = c.cairo_pattern_create_mesh();
+        const c_ptr = c.cairo_pattern_create_mesh();
         _ = try Pattern.status(c_ptr);
         return Self{ .c_ptr = c_ptr.? };
     }
@@ -73,7 +73,7 @@ pub const Pattern = struct {
     /// object and should call destroy() when finished with it.
     /// https://cairographics.org/manual/cairo-cairo-pattern-t.html#cairo-pattern-create-radial
     pub fn createRadial(cx0: f64, cy0: f64, radius0: f64, cx1: f64, cy1: f64, radius1: f64) !Self {
-        var c_ptr = c.cairo_pattern_create_radial(cx0, cy0, radius0, cx1, cy1, radius1);
+        const c_ptr = c.cairo_pattern_create_radial(cx0, cy0, radius0, cx1, cy1, radius1);
         // cairo_pattern_create_radial always returns a valid pointer, but if an
         // error occurred the pattern status will be set to an error.
         _ = try Pattern.status(c_ptr);
@@ -84,7 +84,7 @@ pub const Pattern = struct {
     /// the returned object and should call destroy() when finished with it.
     /// https://cairographics.org/manual/cairo-cairo-pattern-t.html#cairo-pattern-create-rgb
     pub fn createRgb(red: f64, green: f64, blue: f64) !Self {
-        var c_ptr = c.cairo_pattern_create_rgb(red, green, blue);
+        const c_ptr = c.cairo_pattern_create_rgb(red, green, blue);
         // cairo_pattern_create_rgb always returns a valid pointer, but if an
         // error occurred the pattern status will be set to an error.
         _ = try Pattern.status(c_ptr);
@@ -95,7 +95,7 @@ pub const Pattern = struct {
     /// owns the returned object and should call destroy() when finished with it.
     /// https://cairographics.org/manual/cairo-cairo-pattern-t.html#cairo-pattern-create-rgba
     pub fn createRgba(red: f64, green: f64, blue: f64, alpha: f64) !Self {
-        var c_ptr = c.cairo_pattern_create_rgba(red, green, blue, alpha);
+        const c_ptr = c.cairo_pattern_create_rgba(red, green, blue, alpha);
         // cairo_pattern_create_rgba always returns a valid pointer, but if an
         // error occurred the pattern status will be set to an error.
         _ = try Pattern.status(c_ptr);
@@ -125,7 +125,7 @@ pub const Pattern = struct {
     /// https://cairographics.org/manual/cairo-cairo-pattern-t.html#cairo-pattern-get-color-stop-count
     pub fn getColorStopCount(self: *Self) !usize {
         var count: usize = 0;
-        var c_ptr = @ptrCast([*c]c_int, &count);
+        const c_ptr: [*c]c_int = @ptrCast(&count);
         const c_integer = c.cairo_pattern_get_color_stop_count(self.c_ptr, c_ptr);
         return switch (c_integer) {
             c.CAIRO_STATUS_SUCCESS => count,
@@ -140,7 +140,7 @@ pub const Pattern = struct {
     /// is an error.
     /// https://cairographics.org/manual/cairo-cairo-pattern-t.html#cairo-pattern-get-color-stop-rgba
     pub fn getColorStopRgba(self: *Self, index: usize, offset: *f64, red: *f64, green: *f64, blue: *f64, alpha: *f64) !void {
-        const c_integer = c.cairo_pattern_get_color_stop_rgba(self.c_ptr, @intCast(c_int, index), offset, red, green, blue, alpha);
+        const c_integer = c.cairo_pattern_get_color_stop_rgba(self.c_ptr, @intCast(index), offset, red, green, blue, alpha);
         return switch (c_integer) {
             c.CAIRO_STATUS_SUCCESS => {},
             c.CAIRO_STATUS_INVALID_INDEX => Error.InvalidIndex,
@@ -229,7 +229,7 @@ pub const Pattern = struct {
     /// cairo_surface_reference() if the surface is to be retained.
     /// https://cairographics.org/manual/cairo-cairo-pattern-t.html#cairo-pattern-get-surface
     pub fn getSurface(self: *Self, surface: *Surface) !void {
-        const c_ptr = @ptrCast([*c]?*c.struct__cairo_surface, &surface.c_ptr);
+        const c_ptr: [*c]?*c.struct__cairo_surface = @ptrCast(&surface.c_ptr);
         const c_integer = c.cairo_pattern_get_surface(self.c_ptr, c_ptr);
         return switch (c_integer) {
             c.CAIRO_STATUS_SUCCESS => {},

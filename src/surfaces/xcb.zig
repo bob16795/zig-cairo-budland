@@ -20,7 +20,7 @@ pub fn deviceDebugCapXshmVersion() void {
 pub fn deviceGetConnection(device: Device) !*c.xcb_connection_t {
     // TODO: check whether Cairo guarantees that cairo_xcb_device_get_connection
     // always return a valid pointer or not.
-    var c_ptr = c.cairo_xcb_device_get_connection(device.device);
+    const c_ptr = c.cairo_xcb_device_get_connection(device.device);
     if (c_ptr == null) return Error.NullPointer;
     return c_ptr.?;
 }
@@ -59,6 +59,6 @@ pub fn surfaceSetDrawable() void {
 }
 
 /// https://www.cairographics.org/manual/cairo-XCB-Surfaces.html#cairo-xcb-surface-set-size
-pub fn surfaceSetSize(surface: *c.struct__cairo_surface, width: u16, height: u16) void {
+pub fn setSize(surface: *c.struct__cairo_surface, width: u16, height: u16) void {
     c.cairo_xcb_surface_set_size(surface, width, height);
 }

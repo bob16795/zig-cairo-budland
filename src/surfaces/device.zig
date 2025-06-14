@@ -130,7 +130,7 @@ const script_surface = @import("./script.zig");
 const OUTPUT_DEVICE_FILENAME = "test-script-surface.cairoscript";
 
 fn testDevice(filename: []const u8) !Device {
-    var c_ptr = try script_surface.create(filename);
+    const c_ptr = try script_surface.create(filename);
     return Device{ .c_ptr = c_ptr };
 }
 

@@ -117,7 +117,7 @@ pub const Context = struct {
     /// release the reference count by calling destroy on it.
     /// https://cairographics.org/manual/cairo-cairo-t.html#cairo-create
     pub fn create(target: *Surface) !Self {
-        var c_ptr = c.cairo_create(target.c_ptr);
+        const c_ptr = c.cairo_create(target.c_ptr);
         // cairo_create performs a memory allocation, so it might fail. We know
         // it didn't fail if Context.status(c_ptr) returns no error.
         _ = try Context.status(c_ptr);
@@ -170,7 +170,7 @@ pub const Context = struct {
     // TODO: why is this function leaking memory? Isn't list.toOwnedSlice() enough?
     pub fn getDashAlternative(self: *Self, comptime T: type, allocator: std.mem.Allocator) !DashResult(T) {
         const n = self.getDashCount();
-        var offset_ptr = try allocator.create(T);
+        const offset_ptr = try allocator.create(T);
         defer allocator.destroy(offset_ptr);
 
         var list = std.ArrayList(T).init(allocator);
@@ -183,12 +183,12 @@ pub const Context = struct {
         // defer allocator.free(slice);
         // var list = std.ArrayList(T).fromOwnedSlice(allocator, slice);
         c.cairo_get_dash(self.c_ptr, list.items[0..].ptr, offset_ptr);
-        return DashResult(T){ .dash = list.toOwnedSlice(), .offset = offset_ptr.* };
+        return DashResult(T){ .dash = try list.toOwnedSlice(), .offset = offset_ptr.* };
     }
 
     /// https://cairographics.org/manual/cairo-cairo-t.html#cairo-get-dash-count
     pub fn getDashCount(self: *Self) usize {
-        return @intCast(usize, c.cairo_get_dash_count(self.c_ptr));
+        return @intCast(c.cairo_get_dash_count(self.c_ptr));
     }
 
     /// https://cairographics.org/manual/cairo-cairo-t.html#cairo-get-fill-rule
@@ -445,8 +445,8 @@ pub const Context = struct {
     /// https://github.com/freedesktop/cairo/blob/577477207a300fd75c93da93dbb233256d8b48d8/util/cairo-trace/trace.c#L2948
     pub fn selectFontFace(self: *Self, family: [*]const u8, slant: FontSlant, weight: FontWeight) void {
         // const font_slant = @intToEnum(c.enum__cairo_font_slant, @enumToInt(slant));
-        const font_slant = @enumToInt(slant);
-        const font_weight = @enumToInt(weight);
+        const font_slant = @intFromEnum(slant);
+        const font_weight = @intFromEnum(weight);
         // const font_weight = @intToEnum(c.enum__cairo_font_weight, @enumToInt(weight));
         c.cairo_select_font_face(self.c_ptr, family, font_slant, font_weight);
     }
@@ -458,7 +458,7 @@ pub const Context = struct {
 
     /// https://cairographics.org/manual/cairo-cairo-t.html#cairo-set-dash
     pub fn setDash(self: *Self, dashes: []f64, offset: f64) void {
-        c.cairo_set_dash(self.c_ptr, dashes.ptr, @intCast(c_int, dashes.len), offset);
+        c.cairo_set_dash(self.c_ptr, dashes.ptr, @intCast(dashes.len), offset);
     }
 
     /// https://cairographics.org/manual/cairo-cairo-t.html#cairo-set-fill-rule
@@ -660,7 +660,7 @@ fn testContext() !Context {
     var surface = try Surface.image(320, 240);
     defer surface.destroy();
 
-    var cr = try Context.create(&surface);
+    const cr = try Context.create(&surface);
     return cr;
 }
 
@@ -844,7 +844,7 @@ test "getDashAlternative() returns the expected dashes" {
     const offset_expected: f64 = 3.0;
     cr.setDash(dash_expected[0..], offset_expected);
 
-    var allocator = std.heap.page_allocator;
+    const allocator = std.heap.page_allocator;
     // var allocator = std.testing.allocator; // TODO: this shows that the function leaks
     const result = try cr.getDashAlternative(f64, allocator);
     try expectEqual(@as(usize, 4), result.dash.len);
@@ -908,10 +908,10 @@ test "getTarget() returns the expected Surface" {
     var cr = try Context.create(&surface);
     defer cr.destroy();
 
-    var target = try cr.getTarget();
+    const target = try cr.getTarget();
     // surface and target are just containers for the same C pointer.
-    const addr_1 = @ptrToInt(surface.c_ptr);
-    const addr_2 = @ptrToInt(target.c_ptr);
+    const addr_1 = @intFromPtr(surface.c_ptr);
+    const addr_2 = @intFromPtr(target.c_ptr);
     try expectEqual(addr_1, addr_2);
 }
 
@@ -922,14 +922,14 @@ test "getGroupTarget() returns different Surfaces before and after pushGroup()" 
     var cr = try Context.create(&surface);
     defer cr.destroy();
 
-    var target = try cr.getGroupTarget();
-    const addr_1 = @ptrToInt(surface.c_ptr);
-    const addr_2 = @ptrToInt(target.c_ptr);
+    const target = try cr.getGroupTarget();
+    const addr_1 = @intFromPtr(surface.c_ptr);
+    const addr_2 = @intFromPtr(target.c_ptr);
     try expectEqual(addr_1, addr_2);
 
     cr.pushGroup();
-    var target_after = try cr.getGroupTarget();
-    const addr_3 = @ptrToInt(target_after.c_ptr);
+    const target_after = try cr.getGroupTarget();
+    const addr_3 = @intFromPtr(target_after.c_ptr);
     try expect(addr_3 != addr_2);
 }
 

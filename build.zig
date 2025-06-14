@@ -1,5 +1,4 @@
 const std = @import("std");
-const Builder = std.build.Builder;
 const FileSource = std.build.FileSource;
 const Mode = std.builtin.Mode;
 
@@ -45,23 +44,68 @@ const EXAMPLES = [_][]const u8{
     "three_phases",
 };
 
-pub fn build(b: *Builder) void {
+pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-    const mode = b.standardReleaseOptions();
+    const optimize = b.standardOptimizeOption(.{});
 
     // b.verbose = true;
     // b.verbose_cimport = true;
     // b.verbose_link = true;
+
+    const cairo_mod = b.addModule("cairo", .{
+        .root_source_file = b.path("src/cairo.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const cairo = b.addSharedLibrary(.{
+        .name = "cairo",
+        .root_module = cairo_mod,
+    });
+    cairo.linkSystemLibrary("cairo");
+    cairo.linkSystemLibrary("pango");
+
+    const xcb_mod = b.addModule("xcb", .{
+        .root_source_file = b.path("src/xcb.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const xcb = b.addSharedLibrary(.{
+        .name = "xcb",
+        .root_module = xcb_mod,
+    });
+    xcb.linkSystemLibrary("xcb");
+
+    const pangocairo_mod = b.addModule("pangocairo", .{
+        .root_source_file = b.path("src/pangocairo.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const pangocairo = b.addSharedLibrary(.{
+        .name = "pangocairo",
+        .root_module = pangocairo_mod,
+    });
+
+    b.installArtifact(cairo);
+    b.installArtifact(xcb);
+    b.installArtifact(pangocairo);
+
+    // pangocairo_mod.linkSystemLibrary("pangocairo", .{});
+    // pangocairo_mod.addIncludePath(.{ .cwd_relative = "/usr/include/pango-1.0" });
 
     const test_all_modes_step = b.step("test", "Run all tests in all modes.");
     inline for ([_]Mode{ Mode.Debug, Mode.ReleaseFast, Mode.ReleaseSafe, Mode.ReleaseSmall }) |test_mode| {
         const mode_str = comptime modeToString(test_mode);
         const name = "test-" ++ mode_str;
         const desc = "Run all tests in " ++ mode_str ++ " mode.";
-        const tests = b.addTest("src/pangocairo.zig");
-        tests.setBuildMode(test_mode);
-        tests.setTarget(target);
-        tests.setNamePrefix(mode_str ++ " ");
+        const tests = b.addTest(.{
+            .root_source_file = b.path("src/pangocairo.zig"),
+            .target = target,
+            .optimize = test_mode,
+        });
+        // tests.setNamePrefix(mode_str ++ " ");
         tests.linkLibC();
         tests.linkSystemLibrary("xcb");
         tests.linkSystemLibrary("pango");
@@ -70,30 +114,45 @@ pub fn build(b: *Builder) void {
         const test_step = b.step(name, desc);
         test_step.dependOn(&tests.step);
         test_all_modes_step.dependOn(test_step);
+
+        tests.root_module.addImport("cairo", cairo.root_module);
+
+        if (shouldIncludeXcb(name)) {
+            tests.root_module.addImport("xcb", xcb.root_module);
+        }
+        if (shouldIncludePango(name)) {
+            tests.root_module.addImport("pangocairo", pangocairo.root_module);
+        }
     }
 
     // const examples_step = b.step("examples", "Build all examples");
     inline for (EXAMPLES) |name| {
-        const example = b.addExecutable(name, "examples" ++ std.fs.path.sep_str ++ name ++ ".zig");
-        example.addPackage(.{ .name = "cairo", .path = FileSource{ .path = "src/cairo.zig" } });
+        const example = b.addExecutable(.{
+            .name = name,
+            .root_source_file = b.path("examples" ++ std.fs.path.sep_str ++ name ++ ".zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        example.root_module.addImport("cairo", cairo.root_module);
+
         if (shouldIncludeXcb(name)) {
-            example.addPackage(.{ .name = "xcb", .path = FileSource{ .path = "src/xcb.zig" } });
+            example.root_module.addImport("xcb", xcb.root_module);
         }
         if (shouldIncludePango(name)) {
-            example.addPackage(.{ .name = "pangocairo", .path = FileSource{ .path = "src/pangocairo.zig" } });
+            example.root_module.addImport("pangocairo", pangocairo.root_module);
         }
-        example.setBuildMode(mode);
-        example.setTarget(target);
         example.linkLibC();
         example.linkSystemLibrary("cairo");
+        example.linkSystemLibrary("pango");
         if (shouldIncludeXcb(name)) {
             example.linkSystemLibrary("xcb");
         }
         example.linkSystemLibrary("pangocairo");
+        // b.installArtifact(example);
         // example.install(); // uncomment to build ALL examples (it takes ~2 minutes)
         // examples_step.dependOn(&example.step);
 
-        const run_cmd = example.run();
+        const run_cmd = b.addRunArtifact(example);
         run_cmd.step.dependOn(b.getInstallStep());
         const desc = "Run the " ++ name ++ " example";
         const run_step = b.step(name, desc);
